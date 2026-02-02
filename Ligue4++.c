@@ -15,7 +15,7 @@ void iniciarTabuleiro(Posicao tabuleiro[6][7]){
         }
     }
 }
-void imprimitTabuleiro(Posicao tabuleiro[6][6]){
+void imprimirTabuleiro(Posicao tabuleiro[6][6]){
     printf("\n");
     for (int i = 0; i < 6; i++) {
         printf("|");
