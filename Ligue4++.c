@@ -1,125 +1,204 @@
 #include <stdio.h>
 #include <stdlib.h>
-    
+
+#define LINHAS 6
+#define COLUNAS 7
+
+// Definição de constantes para os jogadores e tokens
+#define VAZIO 0
+#define JOGADOR_1 1
+#define JOGADOR_2 2
+
 typedef struct {
-    char simbolo; 
-    int jogador; 
+    int tipo;       
+    char simbolo;   
+    int dono;       
 } Posicao;
 
-void iniciarTabuleiro(Posicao tabuleiro[6][7]){
-    for (int i=0; i<6; i++){
-        for (int j=0; j<7; j++){
-            tabuleiro[i][j].simbolo = ' ';
-            tabuleiro[i][j].jogador = 0;
-    
+Posicao tabuleiro[LINHAS][COLUNAS];
+
+//Funções Auxiliares
+
+// Inicializa o tabuleiro definindo todas as posições como vazias
+void inicializarTabuleiro() {
+    int i, j;
+    for (i = 0; i < LINHAS; i++) {
+        for (j = 0; j < COLUNAS; j++) {
+            tabuleiro[i][j].dono = VAZIO;
+            tabuleiro[i][j].tipo = VAZIO;
+            tabuleiro[i][j].simbolo = '.';
         }
     }
 }
-void imprimirTabuleiro(Posicao tabuleiro[6][6]){
-    printf("\n");
-    for (int i = 0; i < 6; i++) {
+
+// Imprime o tabuleiro na tela
+void imprimirTabuleiro() {
+    // Limpa a tela
+    system("cls || clear"); 
+    
+    printf("\n === LIGUE 4++ (Etapa 1) === \n\n");
+    
+    // Imprime o cabeçalho das colunas
+    printf("  1   2   3   4   5   6   7\n");
+    printf("-----------------------------\n");
+    
+    int i, j;
+    for (i = 0; i < LINHAS; i++) {
         printf("|");
-        for (int j = 0; j < 7; j++) {
+        for (j = 0; j < COLUNAS; j++) {
             printf(" %c |", tabuleiro[i][j].simbolo);
         }
-        printf("\n");
+        printf("\n-----------------------------\n");
     }
-
-    printf("  1   2   3   4   5   6   7\n\n");
+    printf("\n");
 }
 
-int inserirFicha(Posicao tabuleiro[6][7], int coluna, int jogador){
-    for (int i=5; i>=0; i--){
-        if (tabuleiro[i][coluna].jogador ==0 ){
-            tabuleiro[i][coluna].jogador = jogador;
-            tabuleiro[i][coluna].simbolo = (jogador == 1) ? 'X' : 'O';
-            return 1;
+// Verifica se houve vitória (4 em sequência: horizontal, vertical ou diagonal),
+int verificarVitoria(int jogador) {
+    int i, j;
+    // Varre o tabuleiro procurando sequências
+    for (i = 0; i < LINHAS; i++) {
+        for (j = 0; j < COLUNAS; j++) {
+            if (tabuleiro[i][j].dono == jogador) {
+                // Horizontal
+                if (j + 3 < COLUNAS &&
+                    tabuleiro[i][j+1].dono == jogador &&
+                    tabuleiro[i][j+2].dono == jogador &&
+                    tabuleiro[i][j+3].dono == jogador)
+                    return 1;
+                
+                // Vertical
+                if (i + 3 < LINHAS &&
+                    tabuleiro[i+1][j].dono == jogador &&
+                    tabuleiro[i+2][j].dono == jogador &&
+                    tabuleiro[i+3][j].dono == jogador)
+                    return 1;
+
+                // Diagonal Principal (descendo para direita)
+                if (i + 3 < LINHAS && j + 3 < COLUNAS &&
+                    tabuleiro[i+1][j+1].dono == jogador &&
+                    tabuleiro[i+2][j+2].dono == jogador &&
+                    tabuleiro[i+3][j+3].dono == jogador)
+                    return 1;
+
+                // Diagonal Secundária (descendo para esquerda)
+                if (i + 3 < LINHAS && j - 3 >= 0 &&
+                    tabuleiro[i+1][j-1].dono == jogador &&
+                    tabuleiro[i+2][j-2].dono == jogador &&
+                    tabuleiro[i+3][j-3].dono == jogador)
+                    return 1;
+            }
         }
-    }
-    return 1;
-}
-
-
-
-
-
-
-int main(){
-
-	int opcao;
-   do {
-	printf("Ligue 4++\n");
-    printf("1. Inicia novo jogo\n");
-    printf("2. Hall dos campeões\n");
-    printf("3. Sair\n");
-    printf("Escolha uma opção; ");
-    scanf("%d", &opcao);
-
-    if (opcao == 1){
-        jogar();
-    }else if (opcao == 2){
-        printf("Sair\n");
-    } else {
-        printf("Opcao invalida.\n");
     }
     return 0;
-   }
-    /*switch(opcao)
-    {
-        case 1:
-            printf("Iniciando novo jogo...\n");
-            // Código para iniciar um novo jogo
-            break;
-        case 2:
-            printf("Hall dos campeões...\n");
-            // Código para mostrar o hall dos campeões
-            break;
-        case 3:
-            printf("Saindo do jogo...\n");
-            // Código para sair do jogo
-            break;
-        default:
-            printf("Opção inválida!\n");
+}
+
+// Função para inserir ficha comum com "gravidade"
+int inserirFicha(int col, int jogador) {
+    // Ajusta índice (usuário digita 1 a 7, matriz é 0 a 6)
+    int j = col - 1;
+
+    // Validação básica de limites
+    if (j < 0 || j >= COLUNAS) {
+        printf("Coluna invalida! Tente entre 1 e 7.\n");
+        return 0; // Falha
     }
 
-    
-
-    Posicao tabuleiro[6][7];
-
-    for (int i = 0; i < 6; i++) {
-        for (int j = 0; j < 7; j++) {
-            tabuleiro[i][j].simbolo = ' ';
-            tabuleiro[i][j].jogador = 0;
-        }   
-    }
-
-    printf("\n");
-
-
-    int coluna;
-
-    printf("Vez do jogador 1 (X): ");
-    scanf("%d", &coluna);
-    coluna--;
-
-    if (coluna < 0 || coluna > 6) {
-        printf("Coluna invalida!\n");
-        return 0;
-    }
-
-    int linhainserida = -1;
-    for (int i = 5; i >= 0; i--) {
-        if (tabuleiro[i][coluna].jogador == 0) {
-            tabuleiro[i][coluna].simbolo = 'X';
-            tabuleiro[i][coluna].jogador = 1;
-            linhainserida = i;
-            break;
+    // Lógica da Gravidade: percorre de baixo para cima (0)
+    // A ficha ocupa a primeira posição livre encontrada
+    int i;
+    for (i = LINHAS - 1; i >= 0; i--) {
+        if (tabuleiro[i][j].dono == VAZIO) {
+            // Atualiza a struct da posição
+            tabuleiro[i][j].dono = jogador;
+            tabuleiro[i][j].tipo = 1; // Ficha Comum
+            tabuleiro[i][j].simbolo = (jogador == JOGADOR_1) ? 'X' : 'O';
+            return 1; // Sucesso
         }
     }
 
-    if(linhainserida == -1) {
-        printf("Essa coluna está cheia!\n");
+    printf("Coluna cheia! Escolha outra.\n");
+    return 0; // Falha (coluna lotada)
+}
+
+// Loop principal da partida
+void jogar() {
+    inicializarTabuleiro();
+    int turno = 1;
+    int fimDeJogo = 0;
+    int totalJogadas = 0;
+    int maxJogadas = LINHAS * COLUNAS;
+
+    // Loop do jogo
+    while (fimDeJogo == 0 && totalJogadas < maxJogadas) {
+        imprimirTabuleiro();
+
+        // Define de quem é a vez (Ímpar = Jogador 1, Par = Jogador 2)
+        int jogadorAtual = (turno % 2 != 0) ? JOGADOR_1 : JOGADOR_2;
         
+        printf("Vez do Jogador %d (%c). Escolha a coluna (1-7): ", 
+               jogadorAtual, (jogadorAtual == 1) ? 'X' : 'O');
+        
+        int coluna;
+        scanf("%d", &coluna);
+
+        // Tenta inserir a ficha. Se der certo, passa o turno.
+        if (inserirFicha(coluna, jogadorAtual)) {
+            // Verifica vitória após a jogada
+            if (verificarVitoria(jogadorAtual)) {
+                imprimirTabuleiro();
+                printf("\nParabens! Jogador %d (%c) venceu!\n", 
+                       jogadorAtual, (jogadorAtual == 1) ? 'X' : 'O');
+                fimDeJogo = 1;
+            }
+            turno++;
+            totalJogadas++;
+        } else {
+            // Se inserirFicha retornou 0, pede input novamente (turno não avança)
+            printf("Pressione Enter para tentar novamente...");
+            getchar(); getchar(); 
+        }
     }
-	return 0;
-}*/
+
+    if (!fimDeJogo) {
+        imprimirTabuleiro();
+        printf("\nO jogo terminou em EMPATE (Tabuleiro Cheio)!\n");
+    }
+    
+    printf("\nPressione Enter para voltar ao menu...");
+    getchar(); getchar();
+}
+
+// 4. Menu Principal,
+int main() {
+    int opcao = 0;
+
+    do {
+        system("cls || clear");
+        printf("=== MENU LIGUE 4++ ===\n");
+        printf("1. Iniciar Novo Jogo\n");
+        printf("2. Hall dos Campeoes\n");
+        printf("3. Sair\n");
+        printf("Escolha uma opcao: ");
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                jogar();
+                break;
+            case 2:
+                printf("\nFuncionalidade prevista para a Etapa 2.\n");
+                printf("Pressione Enter para continuar...");
+                getchar(); getchar();
+                break;
+            case 3:
+                printf("\nSaindo do jogo... Ate logo!\n");
+                break;
+            default:
+                printf("\nOpcao invalida!\n");
+                getchar(); getchar();
+        }
+    } while (opcao != 3);
+
+    return 0;
+}
