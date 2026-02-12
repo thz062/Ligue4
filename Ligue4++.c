@@ -1,29 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #define LINHAS 6
 #define COLUNAS 7
 
-// Definição de constantes para os jogadores e tokens
+// Constantes
 #define VAZIO 0
 #define JOGADOR_1 1
 #define JOGADOR_2 2
 
+// Tipos de Ficha
+#define COMUM 1
+#define EXPLOSIVA 2
+#define PORTAL 3
+
+// Struct Jogador atualizada para a Etapa 2
 typedef struct {
-    int tipo;       
-    char simbolo;   
-    int dono;       
+    char nome[1];
+    int qtdComum;     // Começa com 21
+    int qtdExplosiva; // Ganha +1 a cada 5 rodadas
+    int qtdPortal;    // Ganha +1 a cada 5 rodadas
+    int id;           // 1 ou 2
+    int jogadas;      // Para o ranking
+} Jogador;
+
+// Struct Posicao (Mantida, com uso do campo 'tipo')
+typedef struct {
+    int tipo;
+    char simbolo;
+    int dono;
 } Posicao;
 
+// Variáveis Globais
 Posicao tabuleiro[LINHAS][COLUNAS];
+Jogador j1, j2; 
 
-//Funções Auxiliares
+// Funções Básicas
 
-// Inicializa o tabuleiro definindo todas as posições como vazias
 void inicializarTabuleiro() {
-    int i, j;
-    for (i = 0; i < LINHAS; i++) {
-        for (j = 0; j < COLUNAS; j++) {
+    for (int i = 0; i < LINHAS; i++) {
+        for (int j = 0; j < COLUNAS; j++) {
             tabuleiro[i][j].dono = VAZIO;
             tabuleiro[i][j].tipo = VAZIO;
             tabuleiro[i][j].simbolo = '.';
@@ -31,21 +49,14 @@ void inicializarTabuleiro() {
     }
 }
 
-// Imprime o tabuleiro na tela
 void imprimirTabuleiro() {
-    // Limpa a tela
-    system("cls || clear"); 
-    
-    printf("\n === LIGUE 4++ (Etapa 1) === \n\n");
-    
-    // Imprime o cabeçalho das colunas
+    system("cls || clear");
+    printf("\n === LIGUE 4++ (Etapa 2) === \n");
     printf("  1   2   3   4   5   6   7\n");
     printf("-----------------------------\n");
-    
-    int i, j;
-    for (i = 0; i < LINHAS; i++) {
+    for (int i = 0; i < LINHAS; i++) {
         printf("|");
-        for (j = 0; j < COLUNAS; j++) {
+        for (int j = 0; j < COLUNAS; j++) {
             printf(" %c |", tabuleiro[i][j].simbolo);
         }
         printf("\n-----------------------------\n");
@@ -53,152 +64,302 @@ void imprimirTabuleiro() {
     printf("\n");
 }
 
-// Verifica se houve vitória (4 em sequência: horizontal, vertical ou diagonal),
 int verificarVitoria(int jogador) {
-    int i, j;
-    // Varre o tabuleiro procurando sequências
-    for (i = 0; i < LINHAS; i++) {
-        for (j = 0; j < COLUNAS; j++) {
+    // Varre o tabuleiro procurando sequências de 4
+    for (int i = 0; i < LINHAS; i++) {
+        for (int j = 0; j < COLUNAS; j++) {
             if (tabuleiro[i][j].dono == jogador) {
                 // Horizontal
                 if (j + 3 < COLUNAS &&
                     tabuleiro[i][j+1].dono == jogador &&
                     tabuleiro[i][j+2].dono == jogador &&
-                    tabuleiro[i][j+3].dono == jogador)
-                    return 1;
-                
+                    tabuleiro[i][j+3].dono == jogador) return 1;
                 // Vertical
                 if (i + 3 < LINHAS &&
                     tabuleiro[i+1][j].dono == jogador &&
                     tabuleiro[i+2][j].dono == jogador &&
-                    tabuleiro[i+3][j].dono == jogador)
-                    return 1;
-
-                // Diagonal Principal (descendo para direita)
+                    tabuleiro[i+3][j].dono == jogador) return 1;
+                // Diagonal Principal
                 if (i + 3 < LINHAS && j + 3 < COLUNAS &&
                     tabuleiro[i+1][j+1].dono == jogador &&
                     tabuleiro[i+2][j+2].dono == jogador &&
-                    tabuleiro[i+3][j+3].dono == jogador)
-                    return 1;
-
-                // Diagonal Secundária (descendo para esquerda)
+                    tabuleiro[i+3][j+3].dono == jogador) return 1;
+                // Diagonal Secundária
                 if (i + 3 < LINHAS && j - 3 >= 0 &&
                     tabuleiro[i+1][j-1].dono == jogador &&
                     tabuleiro[i+2][j-2].dono == jogador &&
-                    tabuleiro[i+3][j-3].dono == jogador)
-                    return 1;
+                    tabuleiro[i+3][j-3].dono == jogador) return 1;
             }
         }
     }
     return 0;
 }
 
-// Função para inserir ficha comum com "gravidade"
-int inserirFicha(int col, int jogador) {
-    // Ajusta índice (usuário digita 1 a 7, matriz é 0 a 6)
-    int j = col - 1;
+// Função Recursiva de Explosão
+void explodir(int l, int c) {
+    if (l < 0 || l >= LINHAS || c < 0 || c >= COLUNAS) return;
 
-    // Validação básica de limites
-    if (j < 0 || j >= COLUNAS) {
-        printf("Coluna invalida! Tente entre 1 e 7.\n");
-        return 0; // Falha
-    }
+    // Limpa a posição central
+    tabuleiro[l][c].tipo = VAZIO;
+    tabuleiro[l][c].dono = VAZIO;
+    tabuleiro[l][c].simbolo = '.';
 
-    // Lógica da Gravidade: percorre de baixo para cima (0)
-    // A ficha ocupa a primeira posição livre encontrada
-    int i;
-    for (i = LINHAS - 1; i >= 0; i--) {
-        if (tabuleiro[i][j].dono == VAZIO) {
-            // Atualiza a struct da posição
-            tabuleiro[i][j].dono = jogador;
-            tabuleiro[i][j].tipo = 1; // Ficha Comum
-            tabuleiro[i][j].simbolo = (jogador == JOGADOR_1) ? 'X' : 'O';
-            return 1; // Sucesso
+    // Percorre vizinhança 3x3
+    for (int i = l - 1; i <= l + 1; i++) {
+        for (int j = c - 1; j <= c + 1; j++) {
+            if (i >= 0 && i < LINHAS && j >= 0 && j < COLUNAS) {
+                // Se encontrar OUTRA explosiva, RECURSÃO
+                if (tabuleiro[i][j].tipo == EXPLOSIVA) {
+                    explodir(i, j); 
+                } else {
+                    // Se for comum ou portal, apenas destrói
+                    tabuleiro[i][j].tipo = VAZIO;
+                    tabuleiro[i][j].dono = VAZIO;
+                    tabuleiro[i][j].simbolo = '.';
+                }
+            }
         }
     }
-
-    printf("Coluna cheia! Escolha outra.\n");
-    return 0; // Falha (coluna lotada)
 }
 
-// Loop principal da partida
-void jogar() {
-    inicializarTabuleiro();
-    int turno = 1;
-    int fimDeJogo = 0;
-    int totalJogadas = 0;
-    int maxJogadas = LINHAS * COLUNAS;
+// Função Inserir Modificada
+// Retorna 1 se a jogada aconteceu, 0 se inválida
+int realizarJogada(int col, int tipo, Jogador *jog) {
+    int j = col - 1; // Ajuste índice
+    if (j < 0 || j >= COLUNAS) {
+        if(jog->id < 3) printf("Coluna invalida!\n"); // Só avisa se for humano
+        return 0;
+    }
 
-    // Loop do jogo
-    while (fimDeJogo == 0 && totalJogadas < maxJogadas) {
-        imprimirTabuleiro();
-
-        // Define de quem é a vez (Ímpar = Jogador 1, Par = Jogador 2)
-        int jogadorAtual = (turno % 2 != 0) ? JOGADOR_1 : JOGADOR_2;
-        
-        printf("Vez do Jogador %d (%c). Escolha a coluna (1-7): ", 
-               jogadorAtual, (jogadorAtual == 1) ? 'X' : 'O');
-        
-        int coluna;
-        scanf("%d", &coluna);
-
-        // Tenta inserir a ficha. Se der certo, passa o turno.
-        if (inserirFicha(coluna, jogadorAtual)) {
-            // Verifica vitória após a jogada
-            if (verificarVitoria(jogadorAtual)) {
-                imprimirTabuleiro();
-                printf("\nParabens! Jogador %d (%c) venceu!\n", 
-                       jogadorAtual, (jogadorAtual == 1) ? 'X' : 'O');
-                fimDeJogo = 1;
+    // -- LÓGICA DO PORTAL --
+    if (tipo == PORTAL) {
+        // Portal elimina a ficha de baixo e some
+        // Procura a primeira ficha ocupada (de cima pra baixo)
+        for (int i = 0; i < LINHAS; i++) {
+            if (tabuleiro[i][j].dono != VAZIO) {
+                tabuleiro[i][j].dono = VAZIO;
+                tabuleiro[i][j].tipo = VAZIO;
+                tabuleiro[i][j].simbolo = '.';
+                jog->qtdPortal--;
+                return 1; 
             }
-            turno++;
-            totalJogadas++;
-        } else {
-            // Se inserirFicha retornou 0, pede input novamente (turno não avança)
-            printf("Pressione Enter para tentar novamente...");
-            getchar(); getchar(); 
+        }
+        // Se a coluna estava vazia, o portal some inutilmente
+        jog->qtdPortal--;
+        return 1;
+    }
+
+    // LÓGICA COMUM E EXPLOSIVA (Gravidade)
+    for (int i = LINHAS - 1; i >= 0; i--) {
+        if (tabuleiro[i][j].dono == VAZIO) {
+            
+            // Verifica o que tem EMBAIXO (para regra da mina)
+            if (i + 1 < LINHAS) {
+                Posicao *abaixo = &tabuleiro[i+1][j];
+                
+                // Se cair em cima de EXPLOSIVA INIMIGA -> BUM!
+                if (abaixo->tipo == EXPLOSIVA && abaixo->dono != jog->id) {
+                    explodir(i+1, j); 
+                    // A ficha jogada também é gasta
+                    if (tipo == COMUM) jog->qtdComum--;
+                    else jog->qtdExplosiva--;
+                    return 1;
+                }
+                
+                // Se cair em cima de EXPLOSIVA AMIGA -> Desativa
+                if (abaixo->tipo == EXPLOSIVA && abaixo->dono == jog->id) {
+                    abaixo->tipo = COMUM; // Vira comum (não explode)
+                }
+            }
+
+            // Inserção Normal
+            tabuleiro[i][j].dono = jog->id;
+            tabuleiro[i][j].tipo = tipo;
+            
+            // Define Símbolo
+            if (tipo == EXPLOSIVA) tabuleiro[i][j].simbolo = (jog->id == 1) ? '*' : '+';
+            else tabuleiro[i][j].simbolo = (jog->id == 1) ? 'X' : 'O';
+
+            // Desconta Inventário
+            if (tipo == COMUM) jog->qtdComum--;
+            else jog->qtdExplosiva--;
+            
+            return 1;
         }
     }
 
-    if (!fimDeJogo) {
-        imprimirTabuleiro();
-        printf("\nO jogo terminou em EMPATE (Tabuleiro Cheio)!\n");
+    if(jog->id < 3) printf("Coluna cheia!\n");
+    return 0;
+}
+
+// Hall da Fama (Arquivos)
+void gerenciarHall(Jogador vencedor) {
+    Jogador hall[2];
+    // Zera o hall temporário
+    for(int k=0; k<3; k++) hall[k].jogadas = 9999;
+
+    FILE *arq = fopen("hall_campeoes.bin", "rb");
+    if (arq != NULL) {
+        fread(hall, sizeof(Jogador), 3, arq);
+        fclose(arq);
     }
+
+    // Verifica se entra no top 3
+    int entrou = 0;
+    for (int i = 0; i < 3; i++) {
+        if (vencedor.jogadas < hall[i].jogadas) {
+            // Desloca
+            for (int k = 2; k > i; k--) hall[k] = hall[k-1];
+            // Insere
+            hall[i] = vencedor;
+            entrou = 1;
+            break;
+        }
+    }
+
+    if (entrou) {
+        printf("\nPARABENS! Voce entrou para o Hall dos Campeões!\n");
+        arq = fopen("hall_campeoes.bin", "wb");
+        fwrite(hall, sizeof(Jogador), 3, arq);
+        fclose(arq);
+    }
+}
+
+void exibirHall() {
+    Jogador hall[2];
+    FILE *arq = fopen("hall_campeoes.bin", "rb");
+    if (arq == NULL) {
+        printf("\nAinda não tem campeoes registrados.\n");
+        return;
+    }
+    fread(hall, sizeof(Jogador), 3, arq);
     
-    printf("\nPressione Enter para voltar ao menu...");
+    printf("\n=== HALL DOS CAMPEOES ===\n");
+    for (int i = 0; i < 3; i++) {
+        if (hall[i].jogadas < 9999)
+            printf("%d. %s - %d jogadas\n", i+1, hall[i].nome, hall[i].jogadas);
+    }
+    fclose(arq);
+    printf("\nPressione Enter...");
     getchar(); getchar();
 }
 
-// 4. Menu Principal,
+// Jogo Principal
+void jogar(int modo) {
+    // Inicializa Jogadores
+    j1.id = 1; j1.qtdComum = 21; j1.qtdExplosiva = 0; j1.qtdPortal = 0; j1.jogadas = 0;
+    j2.id = 2; j2.qtdComum = 21; j2.qtdExplosiva = 0; j2.qtdPortal = 0; j2.jogadas = 0;
+
+    // Configura Nomes
+    if (modo == 1 || modo == 2) {
+        printf("Nome Jogador 1: "); scanf(" %[^\n]", j1.nome);
+    } else strcpy(j1.nome, "CPU 1");
+
+    if (modo == 2) {
+        printf("Nome Jogador 2: "); scanf(" %[^\n]", j2.nome);
+    } else strcpy(j2.nome, "CPU 2");
+
+    inicializarTabuleiro();
+    int turno = 1; // Ímpar = J1, Par = J2
+    int fim = 0;
+    int rodadaGlobal = 0;
+
+    while (!fim && rodadaGlobal < 42) { // Max 42 casas
+        imprimirTabuleiro();
+
+        // Distribuição de Fichas Especiais a cada 5 rodadas) 
+        // Se turno > 1 e (turno-1) % 10 == 0 (5 rodadas de cada) -> ganham fichas
+        if (turno > 1 && (turno-1) % 10 == 0) {
+            j1.qtdExplosiva++; j1.qtdPortal++;
+            j2.qtdExplosiva++; j2.qtdPortal++;
+            printf("Rodada %d: Jogadores ganharam fichas especiais!\n", (turno-1)/2);
+        }
+
+        Jogador *atual = (turno % 2 != 0) ? &j1 : &j2;
+        int ehHumano = 1;
+        if (modo == 3) ehHumano = 0; // Automático
+        if (modo == 1 && atual->id == 2) ehHumano = 0; // 1 Jogador (vs CPU)
+
+        printf("Vez de %s (%c)\n", atual->nome, (atual->id==1)?'X':'O');
+        printf("Inventario: [1]Comum:%d  [2]Explosiva:%d  [3]Portal:%d\n\n", 
+               atual->qtdComum, atual->qtdExplosiva, atual->qtdPortal);
+
+        int col, tipo;
+
+        if (ehHumano) {
+            printf("Escolha TIPO (1,2,3) e COLUNA (1-7): ");
+            if (scanf("%d %d", &tipo, &col) != 2) {
+                while(getchar()!='\n'); continue;
+            }
+        } else {
+            // IA Simples (Aleatória)
+            col = (rand() % 7) + 1;
+            tipo = (rand() % 3) + 1; 
+            // CPU tenta usar especial se tiver, senão usa comum
+            if (tipo == EXPLOSIVA && atual->qtdExplosiva == 0) tipo = COMUM;
+            if (tipo == PORTAL && atual->qtdPortal == 0) tipo = COMUM;
+        }
+
+        // Validação de Inventário
+        int temFicha = 0;
+        if (tipo == COMUM && atual->qtdComum > 0) temFicha = 1;
+        if (tipo == EXPLOSIVA && atual->qtdExplosiva > 0) temFicha = 1;
+        if (tipo == PORTAL && atual->qtdPortal > 0) temFicha = 1;
+
+        if (!temFicha) {
+            if(ehHumano) {
+                printf("Voce não tem essa ficha!\n");
+                getchar(); getchar();
+            }
+            continue;
+        }
+
+        // Tenta Jogar
+        if (realizarJogada(col, tipo, atual)) {
+            atual->jogadas++;
+            rodadaGlobal++;
+            
+            if (verificarVitoria(atual->id)) {
+                imprimirTabuleiro();
+                printf("\nVITORIA DE %s!\n", atual->nome);
+                gerenciarHall(*atual);
+                fim = 1;
+            } else {
+                turno++;
+            }
+        }
+    }
+
+    if (!fim) printf("EMPATE!\n");
+    printf("Pressione Enter para voltar...");
+    getchar(); getchar();
+}
+
+// Menu (Atualizado)
 int main() {
+    srand(time(NULL)); // Aleatórios
     int opcao = 0;
 
     do {
         system("cls || clear");
-        printf("=== MENU LIGUE 4++ ===\n");
-        printf("1. Iniciar Novo Jogo\n");
-        printf("2. Hall dos Campeoes\n");
-        printf("3. Sair\n");
-        printf("Escolha uma opcao: ");
+        printf("=== MENU LIGUE 4++ (ETAPA 2) ===\n");
+        printf("1. 1 Jogador (Vs CPU)\n");
+        printf("2. 2 Jogadores\n");
+        printf("3. Automatico (CPU vs CPU)\n");
+        printf("4. Hall dos Campeoes\n");
+        printf("5. Sair\n");
+        printf("Escolha: ");
         scanf("%d", &opcao);
 
         switch (opcao) {
-            case 1:
-                jogar();
-                break;
-            case 2:
-                printf("\nFuncionalidade prevista para a Etapa 2.\n");
-                printf("Pressione Enter para continuar...");
-                getchar(); getchar();
-                break;
-            case 3:
-                printf("\nSaindo do jogo... Ate logo!\n");
-                break;
-            default:
-                printf("\nOpcao invalida!\n");
-                getchar(); getchar();
+            case 1: jogar(1); break;
+            case 2: jogar(2); break;
+            case 3: jogar(3); break;
+            case 4: exibirHall(); break;
+            case 5: printf("Saindo...\n"); break;
+            default: printf("Opcao invalida!\n");
         }
-    } while (opcao != 3);
+    } while (opcao != 5);
 
     return 0;
 }
