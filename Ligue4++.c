@@ -18,7 +18,7 @@
 
 // Struct Jogador atualizada para a Etapa 2
 typedef struct {
-    char nome[1];
+    char nome[21];
     int qtdComum;     // Começa com 21
     int qtdExplosiva; // Ganha +1 a cada 5 rodadas
     int qtdPortal;    // Ganha +1 a cada 5 rodadas
@@ -194,7 +194,7 @@ int realizarJogada(int col, int tipo, Jogador *jog) {
 
 // Hall da Fama (Arquivos)
 void gerenciarHall(Jogador vencedor) {
-    Jogador hall[2];
+    Jogador hall[3];
     // Zera o hall temporário
     for(int k=0; k<3; k++) hall[k].jogadas = 9999;
 
@@ -226,7 +226,7 @@ void gerenciarHall(Jogador vencedor) {
 }
 
 void exibirHall() {
-    Jogador hall[2];
+    Jogador hall[3];
     FILE *arq = fopen("hall_campeoes.bin", "rb");
     if (arq == NULL) {
         printf("\nAinda não tem campeoes registrados.\n");
